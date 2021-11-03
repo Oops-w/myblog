@@ -106,40 +106,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Java生产者消费者模型的虚假唤醒</title>
-    <url>/2021/08/15/Java%E7%94%9F%E4%BA%A7%E8%80%85%E6%B6%88%E8%B4%B9%E8%80%85%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%99%9A%E5%81%87%E5%94%A4%E9%86%92/</url>
-    <content><![CDATA[<link rel="stylesheet" class="aplayer-secondary-style-marker" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js" class="aplayer-secondary-script-marker"></script><h1 id="Java生产者消费者模型的虚假唤醒"><a href="#Java生产者消费者模型的虚假唤醒" class="headerlink" title="Java生产者消费者模型的虚假唤醒"></a>Java生产者消费者模型的虚假唤醒</h1><p>首先我们来看代码：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.wsy.study;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> lombok.SneakyThrows;</span><br><span class="line"><span class="keyword">import</span> org.junit.Test;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.concurrent.TimeUnit;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> wsy</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2021/8/15 3:25 下午</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@Description</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo4</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    Object obj = <span class="keyword">new</span> Object();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> mutex = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Test</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">        <span class="keyword">new</span> Consumer(<span class="string">&quot;c1&quot;</span>).start();</span><br><span class="line">        <span class="keyword">new</span> Consumer(<span class="string">&quot;c2&quot;</span>).start();</span><br><span class="line">        <span class="keyword">new</span> Consumer(<span class="string">&quot;c3&quot;</span>).start();</span><br><span class="line">        TimeUnit.SECONDS.sleep(<span class="number">3</span>);</span><br><span class="line">        <span class="keyword">new</span> Producer(<span class="string">&quot;p1&quot;</span>).start();</span><br><span class="line">        <span class="keyword">new</span> Producer(<span class="string">&quot;p2&quot;</span>).start();</span><br><span class="line">        <span class="keyword">new</span> Producer(<span class="string">&quot;p3&quot;</span>).start();</span><br><span class="line">        <span class="keyword">while</span> (<span class="keyword">true</span>) ;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Producer</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">Producer</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">super</span>(name);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@SneakyThrows</span></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) &#123;</span><br><span class="line">                <span class="keyword">synchronized</span> (obj) &#123;</span><br><span class="line">                    <span class="comment">//如果已经满了的话</span></span><br><span class="line">                    <span class="keyword">if</span> (mutex &gt;= <span class="number">5</span>) &#123;</span><br><span class="line">                        obj.wait();</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="comment">//如果没满则生产商品</span></span><br><span class="line">                    mutex++;</span><br><span class="line">                    System.out.println(Thread.currentThread().getName() + <span class="string">&quot; 生产了商品... 目前商品量为：&quot;</span> + mutex);</span><br><span class="line">                    obj.notifyAll();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Consumer</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">Consumer</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">super</span>(name);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@SneakyThrows</span></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) &#123;</span><br><span class="line">                <span class="keyword">synchronized</span> (obj) &#123;</span><br><span class="line">                    <span class="comment">//如果没有商品的话</span></span><br><span class="line">                    <span class="keyword">if</span> (mutex &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                        obj.wait();</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="comment">//如果有商品则消费商品</span></span><br><span class="line">                    mutex--;</span><br><span class="line">                    System.out.println(Thread.currentThread().getName() + <span class="string">&quot; 消费了商品... 目前商品量为： &quot;</span> + mutex);</span><br><span class="line">                    obj.notifyAll();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>执行结果：</p>
-<p><img src="http://cdn.oopsw.top/20210815161140.png" alt="image-20210815161138979"></p>
-</blockquote>
-<p>我们可以看到在输出信息中产生了一些不应该出现的值， 比如说-1 -2这种值，因为我们消费者在消费之前会判断是否商品是&lt;=0的如果是的话就会在那里阻塞。</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span> (mutex &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">  obj.wait();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="怎么解决这种问题呢？"><a href="#怎么解决这种问题呢？" class="headerlink" title="怎么解决这种问题呢？"></a>怎么解决这种问题呢？</h2><p>将生产者和消费者的if改成while就好了</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">while</span> (mutex &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">  obj.wait();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>这时候我们再执行一遍</p>
-<blockquote>
-<p><img src="http://cdn.oopsw.top/20210815161505.png" alt="image-20210815161503650"></p>
-</blockquote>
-<p>此时我们发现问题被解决了，不会出现那种问题了。</p>
-<h2 id="为什么会出现这种问题呢？"><a href="#为什么会出现这种问题呢？" class="headerlink" title="为什么会出现这种问题呢？"></a>为什么会出现这种问题呢？</h2><p>这里我来画个图演示一下：</p>
-<p>出现问题的情况：</p>
-<p><img src="http://cdn.oopsw.top/20210815163120.png" alt="image-20210815163041120"></p>
-<p>解决问题的情况：</p>
-<p><img src="http://cdn.oopsw.top/20210815163631.png" alt="image-20210815163602631"></p>
-<p>通过查阅JDK的文档也有提到虚假唤醒的情况：</p>
-<p><img src="http://cdn.oopsw.top/20210815163750.png" alt="image-20210815163741965"></p>
-<p>我认为出现虚假唤醒的情况主要是因为使用if判断的话，进行阻塞后释放锁，在别的线程发起唤醒信号时，如果该线程重新拿到了锁并不会重新去判断目前是否有商品，而是直接顺序执行，去进行消费操作。</p>
-]]></content>
-      <categories>
-        <category>多线程</category>
-      </categories>
-      <tags>
-        <tag>多线程</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Kibana学习笔记</title>
     <url>/2021/01/07/Kibana%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
     <content><![CDATA[<link rel="stylesheet" class="aplayer-secondary-style-marker" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js" class="aplayer-secondary-script-marker"></script><h1 id="Kibana入门"><a href="#Kibana入门" class="headerlink" title="Kibana入门"></a>Kibana入门</h1><p>Kibana 是一款开源的数据分析和可视化平台，它是 Elastic Stack 成员之一，设计用于和 Elasticsearch 协作。您可以使用 Kibana 对 Elasticsearch 索引中的数据进行搜索、查看、交互操作。您可以很方便的利用图表、表格及地图对数据进行多元化的分析和呈现。</p>
@@ -335,6 +301,18 @@
       </tags>
   </entry>
   <entry>
+    <title>dubbo-admin登录问题</title>
+    <url>/2021/01/07/dubbo-admin%E7%99%BB%E5%BD%95%E9%97%AE%E9%A2%98/</url>
+    <content><![CDATA[<link rel="stylesheet" class="aplayer-secondary-style-marker" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js" class="aplayer-secondary-script-marker"></script><h1 id="dubbo-admin登录问题"><a href="#dubbo-admin登录问题" class="headerlink" title="dubbo-admin登录问题"></a>dubbo-admin登录问题</h1><p>今天在学习dubbo时，clone了dubbo-admin这个dubbo的后台管理项目，结果配置了密码之后发现一直登录不上，也没有任何报错等消息，经过了不少时间的测试和在网上翻阅博客，发现了原来是配置文件里面有一个坑，我习惯性的认为是配置的是账号与密码，结果发现是配置的root的密码和guest的密码。无语。。。。。<br><img src="https://img-blog.csdnimg.cn/20200915205347940.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80MzQ0ODU5OA==,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"></p>
+]]></content>
+      <categories>
+        <category>Dubbo</category>
+      </categories>
+      <tags>
+        <tag>Dubbo</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>docker操作</title>
     <url>/2021/03/25/docker%E6%93%8D%E4%BD%9C/</url>
     <content><![CDATA[<link rel="stylesheet" class="aplayer-secondary-style-marker" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js" class="aplayer-secondary-script-marker"></script><h2 id="1-安装docker"><a href="#1-安装docker" class="headerlink" title="1 安装docker"></a>1 安装docker</h2><h3 id="1-1-安装依赖包"><a href="#1-1-安装依赖包" class="headerlink" title="1.1 安装依赖包"></a>1.1 安装依赖包</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo yum install -y yum-utils device-mapper-persistent-data lvm2 </span><br></pre></td></tr></table></figure>
@@ -391,18 +369,6 @@
       <tags>
         <tag>Linux</tag>
         <tag>Docker</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>dubbo-admin登录问题</title>
-    <url>/2021/01/07/dubbo-admin%E7%99%BB%E5%BD%95%E9%97%AE%E9%A2%98/</url>
-    <content><![CDATA[<link rel="stylesheet" class="aplayer-secondary-style-marker" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js" class="aplayer-secondary-script-marker"></script><h1 id="dubbo-admin登录问题"><a href="#dubbo-admin登录问题" class="headerlink" title="dubbo-admin登录问题"></a>dubbo-admin登录问题</h1><p>今天在学习dubbo时，clone了dubbo-admin这个dubbo的后台管理项目，结果配置了密码之后发现一直登录不上，也没有任何报错等消息，经过了不少时间的测试和在网上翻阅博客，发现了原来是配置文件里面有一个坑，我习惯性的认为是配置的是账号与密码，结果发现是配置的root的密码和guest的密码。无语。。。。。<br><img src="https://img-blog.csdnimg.cn/20200915205347940.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80MzQ0ODU5OA==,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"></p>
-]]></content>
-      <categories>
-        <category>Dubbo</category>
-      </categories>
-      <tags>
-        <tag>Dubbo</tag>
       </tags>
   </entry>
   <entry>
@@ -849,6 +815,40 @@
       <tags>
         <tag>数据结构</tag>
         <tag>Queue</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Java生产者消费者模型的虚假唤醒</title>
+    <url>/2021/08/15/Java%E7%94%9F%E4%BA%A7%E8%80%85%E6%B6%88%E8%B4%B9%E8%80%85%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%99%9A%E5%81%87%E5%94%A4%E9%86%92/</url>
+    <content><![CDATA[<link rel="stylesheet" class="aplayer-secondary-style-marker" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js" class="aplayer-secondary-script-marker"></script><h1 id="Java生产者消费者模型的虚假唤醒"><a href="#Java生产者消费者模型的虚假唤醒" class="headerlink" title="Java生产者消费者模型的虚假唤醒"></a>Java生产者消费者模型的虚假唤醒</h1><p>首先我们来看代码：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.wsy.study;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> lombok.SneakyThrows;</span><br><span class="line"><span class="keyword">import</span> org.junit.Test;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.concurrent.TimeUnit;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> wsy</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2021/8/15 3:25 下午</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@Description</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo4</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    Object obj = <span class="keyword">new</span> Object();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> mutex = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Test</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">        <span class="keyword">new</span> Consumer(<span class="string">&quot;c1&quot;</span>).start();</span><br><span class="line">        <span class="keyword">new</span> Consumer(<span class="string">&quot;c2&quot;</span>).start();</span><br><span class="line">        <span class="keyword">new</span> Consumer(<span class="string">&quot;c3&quot;</span>).start();</span><br><span class="line">        TimeUnit.SECONDS.sleep(<span class="number">3</span>);</span><br><span class="line">        <span class="keyword">new</span> Producer(<span class="string">&quot;p1&quot;</span>).start();</span><br><span class="line">        <span class="keyword">new</span> Producer(<span class="string">&quot;p2&quot;</span>).start();</span><br><span class="line">        <span class="keyword">new</span> Producer(<span class="string">&quot;p3&quot;</span>).start();</span><br><span class="line">        <span class="keyword">while</span> (<span class="keyword">true</span>) ;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Producer</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">Producer</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">super</span>(name);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@SneakyThrows</span></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) &#123;</span><br><span class="line">                <span class="keyword">synchronized</span> (obj) &#123;</span><br><span class="line">                    <span class="comment">//如果已经满了的话</span></span><br><span class="line">                    <span class="keyword">if</span> (mutex &gt;= <span class="number">5</span>) &#123;</span><br><span class="line">                        obj.wait();</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="comment">//如果没满则生产商品</span></span><br><span class="line">                    mutex++;</span><br><span class="line">                    System.out.println(Thread.currentThread().getName() + <span class="string">&quot; 生产了商品... 目前商品量为：&quot;</span> + mutex);</span><br><span class="line">                    obj.notifyAll();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Consumer</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">Consumer</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">super</span>(name);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@SneakyThrows</span></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) &#123;</span><br><span class="line">                <span class="keyword">synchronized</span> (obj) &#123;</span><br><span class="line">                    <span class="comment">//如果没有商品的话</span></span><br><span class="line">                    <span class="keyword">if</span> (mutex &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                        obj.wait();</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="comment">//如果有商品则消费商品</span></span><br><span class="line">                    mutex--;</span><br><span class="line">                    System.out.println(Thread.currentThread().getName() + <span class="string">&quot; 消费了商品... 目前商品量为： &quot;</span> + mutex);</span><br><span class="line">                    obj.notifyAll();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>执行结果：</p>
+<p><img src="http://cdn.oopsw.top/20210815161140.png" alt="image-20210815161138979"></p>
+</blockquote>
+<p>我们可以看到在输出信息中产生了一些不应该出现的值， 比如说-1 -2这种值，因为我们消费者在消费之前会判断是否商品是&lt;=0的如果是的话就会在那里阻塞。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span> (mutex &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">  obj.wait();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="怎么解决这种问题呢？"><a href="#怎么解决这种问题呢？" class="headerlink" title="怎么解决这种问题呢？"></a>怎么解决这种问题呢？</h2><p>将生产者和消费者的if改成while就好了</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">while</span> (mutex &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">  obj.wait();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这时候我们再执行一遍</p>
+<blockquote>
+<p><img src="http://cdn.oopsw.top/20210815161505.png" alt="image-20210815161503650"></p>
+</blockquote>
+<p>此时我们发现问题被解决了，不会出现那种问题了。</p>
+<h2 id="为什么会出现这种问题呢？"><a href="#为什么会出现这种问题呢？" class="headerlink" title="为什么会出现这种问题呢？"></a>为什么会出现这种问题呢？</h2><p>这里我来画个图演示一下：</p>
+<p>出现问题的情况：</p>
+<p><img src="http://cdn.oopsw.top/20210815163120.png" alt="image-20210815163041120"></p>
+<p>解决问题的情况：</p>
+<p><img src="http://cdn.oopsw.top/20210815163631.png" alt="image-20210815163602631"></p>
+<p>通过查阅JDK的文档也有提到虚假唤醒的情况：</p>
+<p><img src="http://cdn.oopsw.top/20210815163750.png" alt="image-20210815163741965"></p>
+<p>我认为出现虚假唤醒的情况主要是因为使用if判断的话，进行阻塞后释放锁，在别的线程发起唤醒信号时，如果该线程重新拿到了锁并不会重新去判断目前是否有商品，而是直接顺序执行，去进行消费操作。</p>
+]]></content>
+      <categories>
+        <category>多线程</category>
+      </categories>
+      <tags>
+        <tag>多线程</tag>
       </tags>
   </entry>
   <entry>
